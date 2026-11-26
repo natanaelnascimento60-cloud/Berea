@@ -1,0 +1,153 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user study profile, streak, translation preference, and daily notification settings.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name."
+        },
+        "streakDays": {
+          "type": "integer",
+          "description": "Consecutive days of Bible study."
+        },
+        "lastStudyDate": {
+          "type": "string",
+          "description": "ISO date string (YYYY-MM-DD) of last completed reading."
+        },
+        "preferredTranslation": {
+          "type": "string",
+          "enum": ["NVI", "ARA", "NAA", "TB", "KJV"],
+          "description": "Default Bible translation code."
+        },
+        "notificationsEnabled": {
+          "type": "boolean",
+          "description": "Whether daily reading progress notifications are enabled."
+        },
+        "notificationHour": {
+          "type": "integer",
+          "description": "Hour of day (0-23) for daily reminder."
+        },
+        "notificationMinute": {
+          "type": "integer",
+          "description": "Minute of hour (0-59) for daily reminder."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "displayName", "streakDays", "preferredTranslation", "notificationsEnabled", "notificationHour", "notificationMinute", "createdAt", "updatedAt"]
+    },
+    "StudyNote": {
+      "title": "StudyNote",
+      "description": "Personal exegetical or devotional study note linked to a Bible verse.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "verseRef": {
+          "type": "string",
+          "description": "Scripture reference such as 1 Pedro 1:3."
+        },
+        "title": {
+          "type": "string",
+          "description": "Note heading."
+        },
+        "content": {
+          "type": "string",
+          "description": "Exegetical or devotional note body."
+        },
+        "tag": {
+          "type": "string",
+          "description": "Optional study category tag."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "verseRef", "title", "content", "createdAt", "updatedAt"]
+    },
+    "ReadingPlan": {
+      "title": "ReadingPlan",
+      "description": "Personalized Bible reading plan with daily assignments and completion tracking.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "title": {
+          "type": "string",
+          "description": "Reading plan title."
+        },
+        "description": {
+          "type": "string",
+          "description": "Overview of the reading plan."
+        },
+        "totalDays": {
+          "type": "integer",
+          "description": "Total number of days in the plan."
+        },
+        "completedDays": {
+          "type": "array",
+          "description": "List of completed 1-based day numbers."
+        },
+        "readings": {
+          "type": "array",
+          "description": "Ordered daily reading assignments."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether this plan is currently active."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "title", "description", "totalDays", "completedDays", "readings", "active", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile, streak, translation preference, and notification preferences."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/StudyNote" },
+      "description": "User's personal biblical study notes."
+    },
+    "/users/{userId}/readingPlans/{planId}": {
+      "schema": { "$ref": "#/entities/ReadingPlan" },
+      "description": "User's personalized Bible reading plans."
+    }
+  }
+}

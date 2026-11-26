@@ -1,0 +1,6 @@
+{
+  "name": "Berea",
+  "description": "Aplicativo de exegese bíblica com textos originais em grego e hebraico, análise morfológica, ocorrência de palavras, léxicos Strong, dicionários, comentários exegéticos e plano de leitura personalizado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

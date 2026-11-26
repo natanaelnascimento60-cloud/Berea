@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Berea</string>
+    <string name="notification_channel_id">verbo_daily_study_channel</string>
+    <string name="notification_channel_name">Plano de Leitura Diário</string>
+    <string name="notification_channel_description">Lembretes diários de progresso no plano de leitura bíblica e estudo teológico.</string>
+</resources>

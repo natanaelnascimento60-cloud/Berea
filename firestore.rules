@@ -1,0 +1,176 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable security primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTranslation(code) {
+      return code is string && code in ['NVI', 'ARA', 'NAA', 'TB', 'KJV'];
+    }
+
+    // User Profile validation helper
+    function isValidUserProfile(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId.size() <= 128 &&
+             data.displayName is string &&
+             data.displayName.size() >= 1 &&
+             data.displayName.size() <= 80 &&
+             data.streakDays is int &&
+             data.streakDays >= 0 &&
+             data.streakDays <= 36500 &&
+             (!('lastStudyDate' in data) || (data.lastStudyDate is string && data.lastStudyDate.size() <= 20)) &&
+             isValidTranslation(data.preferredTranslation) &&
+             data.notificationsEnabled is bool &&
+             data.notificationHour is int &&
+             data.notificationHour >= 0 &&
+             data.notificationHour <= 23 &&
+             data.notificationMinute is int &&
+             data.notificationMinute >= 0 &&
+             data.notificationMinute <= 59 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    // Study Note validation helper
+    function isValidStudyNote(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId.size() <= 128 &&
+             data.verseRef is string &&
+             data.verseRef.size() >= 1 &&
+             data.verseRef.size() <= 100 &&
+             data.title is string &&
+             data.title.size() >= 1 &&
+             data.title.size() <= 120 &&
+             data.content is string &&
+             data.content.size() >= 1 &&
+             data.content.size() <= 5000 &&
+             (!('tag' in data) || (data.tag is string && data.tag.size() <= 40)) &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    // Reading Plan validation helper
+    function isValidReadingPlan(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId.size() <= 128 &&
+             data.title is string &&
+             data.title.size() >= 1 &&
+             data.title.size() <= 120 &&
+             data.description is string &&
+             data.description.size() <= 500 &&
+             data.totalDays is int &&
+             data.totalDays >= 1 &&
+             data.totalDays <= 365 &&
+             data.completedDays is list &&
+             data.completedDays.size() <= 365 &&
+             (data.completedDays.size() == 0 || data.completedDays[0] is int) &&
+             data.readings is list &&
+             data.readings.size() >= 1 &&
+             data.readings.size() <= 365 &&
+             data.readings[0] is string &&
+             data.active is bool &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'streakDays', 'preferredTranslation', 'notificationsEnabled', 'notificationHour', 'notificationMinute', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'streakDays', 'lastStudyDate', 'preferredTranslation', 'notificationsEnabled', 'notificationHour', 'notificationMinute', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredTranslation', 'updatedAt']) ||
+                         incoming().diff(existing()).affectedKeys().hasOnly(['streakDays', 'lastStudyDate', 'updatedAt']) ||
+                         incoming().diff(existing()).affectedKeys().hasOnly(['notificationsEnabled', 'notificationHour', 'notificationMinute', 'updatedAt'])
+                       );
+
+      allow delete: if false;
+
+      match /notes/{noteId} {
+        allow get: if isOwner(userId) && isValidId(noteId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(noteId) &&
+                         incoming().keys().hasAll(['userId', 'verseRef', 'title', 'content', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'verseRef', 'title', 'content', 'tag', 'createdAt', 'updatedAt']) &&
+                         isValidStudyNote(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(noteId) &&
+                         isValidStudyNote(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['verseRef', 'title', 'content', 'tag', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(noteId);
+      }
+
+      match /readingPlans/{planId} {
+        allow get: if isOwner(userId) && isValidId(planId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(planId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'description', 'totalDays', 'completedDays', 'readings', 'active', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'description', 'totalDays', 'completedDays', 'readings', 'active', 'createdAt', 'updatedAt']) &&
+                         isValidReadingPlan(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(planId) &&
+                         isValidReadingPlan(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['completedDays', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['active', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'readings', 'totalDays', 'completedDays', 'active', 'updatedAt'])
+                         );
+
+        allow delete: if isOwner(userId) && isValidId(planId);
+      }
+    }
+  }
+}
