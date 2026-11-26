@@ -7,11 +7,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configurar Java 21
+      - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Preparar projeto para build
         run: |
@@ -21,13 +21,15 @@ jobs:
           fi
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
           echo "GEMINI_API_KEY=placeholder" > .env.example
+          echo "" >> gradle.properties
+          echo "ksp.useKSP2=false" >> gradle.properties
 
       - name: Compilar APK de Teste
         run: |
           if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --no-daemon -Pkotlin.incremental=false
+            ./gradlew assembleDebug --no-daemon -Pksp.useKSP2=false
           else
-            gradle assembleDebug --no-daemon -Pkotlin.incremental=false
+            gradle assembleDebug --no-daemon -Pksp.useKSP2=false
           fi
 
       - name: Enviar APK para Download
