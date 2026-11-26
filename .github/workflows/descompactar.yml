@@ -1,0 +1,29 @@
+name: Descompactar Projeto
+on:
+  workflow_dispatch:
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e organizar arquivos
+        run: |
+          unzip -o "*.zip" -d temp_extract
+          if [ $(ls -1 temp_extract | wc -l) -eq 1 ]; then
+            SUBDIR=$(ls -1 temp_extract)
+            cp -rn temp_extract/"$SUBDIR"/* .
+            cp -rn temp_extract/"$SUBDIR"/.* . 2>/dev/null || true
+          else
+            cp -rn temp_extract/* .
+          fi
+          rm -rf temp_extract *.zip
+      - name: Salvar arquivos no repositorio
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git add .
+          git commit -m "Projeto extraido automaticamente"
+          git push
+          
